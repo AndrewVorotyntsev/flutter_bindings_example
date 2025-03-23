@@ -1,16 +1,65 @@
 # flutter_bindings_example
+Примеры использования биндингов во Flutter.
 
-A new Flutter project.
+# Bindings
 
-## Getting Started
+Связь между движком движком и фреймворком. Связь PlatformDispatcher из dart:ui и более высокоуровневыми слоями фреймворка, своего рода набор фасадов над PlatformDispatcher.
 
-This project is a starting point for a Flutter application.
+Базовый класс для всех биндингов BindingBase. 
+Все биндинги синглтоны.
 
-A few resources to get you started if this is your first Flutter project:
+Всего во Flutter 9 наследников класса `BindingBase`:
+- [`SchedulerBinding`](https://api.flutter.dev/flutter/scheduler/SchedulerBinding-mixin.html);
+- [`ServicesBinding`](https://api.flutter.dev/flutter/services/ServicesBinding-mixin.html);
+- [`GestureBinding`](https://api.flutter.dev/flutter/gestures/GestureBinding-mixin.html);
+- [`RendererBinding`](https://api.flutter.dev/flutter/rendering/RendererBinding-mixin.html);
+- [`SemanticsBinding`](https://api.flutter.dev/flutter/semantics/SemanticsBinding-mixin.html);
+- [`PaintingBinding`](https://api.flutter.dev/flutter/painting/PaintingBinding-mixin.html);
+- [`WidgetsBinding`](https://api.flutter.dev/flutter/widgets/WidgetsBinding-mixin.html);
+- [`WidgetsFlutterBinding`](https://api.flutter.dev/flutter/widgets/WidgetsFlutterBinding-class.html);
+- [`TestWidgetsFlutterBinding`](https://api.flutter.dev/flutter/flutter_test/TestWidgetsFlutterBinding-class.html).
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+### SchedulerBinding
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Планировка задач, связанных с отрисовкой кадра.
+1. Вызовы преходящих задач (`transientCallbacks`), например, события тикеров и контроллеров анимации. Обычно такие колбеки отвечают за обновление объектов до новых состояний анимации.
+2. Задачи (микротаски) которые должны быть выполнены между отрисовкой кадров.midFrameMicrotasks
+3. Вызовы непрерывных задач (`persistentCallbacks`). Используются для запуска рендеринга. Например, метод `build` у виджета.
+4. Задачи, вызываемые после отрисовки кадра (`postFrameCallbacks`). Обычно их нельзя выполнить в процессе рендеринга (очистка кеша изображений).
+5. С помощью `SchedulerBinding` можно управлять стратегией работы сборщика мусора.
+
+
+Таким образом можно выполнять задачи: 
+- **до** отрисовки,
+- **между** отрисовкой, 
+- **для** отрисовки,
+- **после** отрисовки.
+### ServicesBinding
+
+1. Прослушивание и перенаправление платформенных сообщений в [`BinaryMessenger`](https://api.flutter.dev/flutter/services/BinaryMessenger-class.html), сервис, к которому по умолчанию привязываются платформенные каналы: каналы методов ([`MethodChannel`](https://api.flutter.dev/flutter/services/MethodChannel-class.html)) и событий ([`EventChannel`](https://api.flutter.dev/flutter/services/EventChannel-class.html)).
+2. Сбор и регистрация лицензий пакетов, которые были в приложении в качестве зависимостей.
+3. Сохранение ссылки на токен главного изолята. Он необходим для того чтобы общаться через платформенные каналы из сторонних изолятов. 
+4. Обработка системных событий, которые идут от платформы. Например, запрос на выход из приложения, жизненный цикл приложения, событие out of memory, нажатия клавиатуры и др.
+5. Создание [`RestorationManager`](https://api.flutter.dev/flutter/services/RestorationManager-class.html) — это сущность, которая отвечает за восстановление состояния приложения.
+
+### RendererBinding
+
+Cвязывает RenderObject и Flutter engine. 
+- Прослушивает событий от engine которые связаны с изменением настроек устройства, которые влияют на отображение (например, тёмная тема или размер текста).
+- Передает во Flutter engine изменения на экране drawFrame().
+- В специфичных ситуациях или при оптимизации работы приложения `RendererBinding` для более точного контроля над рендерингом.
+Метод drawFrame() автоматически запускается движком, когда приходит время расположить и отрисовать кадр.
+
+### WidgetsBinding
+
+Связывает engine и виджеты.
+- управляет процессом перестроения структуры дерева элементов (для этого используется [`BuildOwner`](https://api.flutter.dev/flutter/widgets/BuildOwner-class.html));
+- производит отрисовку в ответ на изменения структуры дерева.
+
+### Связь между собой
+Одни биндинги являются обертками (миксинами) над другими:
+Самый высокоуровневый WidgetsBinding, а самый низкоуровневый SchedulerBinding.
+WidgetsBinding -> RendererBinding -> ServicesBindings -> SchedulerBinding
+
+### Источники
+https://education.yandex.ru/handbook/flutter/article/bindings
